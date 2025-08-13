@@ -3,7 +3,7 @@ use std::vec;
 const P: u32 = 66587;
 const K_MAX: u32 = 0xfffff;
 
-fn main() -> ! {
+fn main() -> () {
     let can_ids = vec![0x23u16, 0x306, 0x600, 0x601, 0x602, 0xa, 0x5a, 0x313];
 
     let mut m = can_ids.len() as u32;
@@ -12,7 +12,7 @@ fn main() -> ! {
     loop {
         let mut hash_table = vec![0u16; m as usize];
         while k < K_MAX {
-            let i = 0;
+            let mut i = 0;
             while i < can_ids.len() {
                 let index = hash(m, k, &can_ids[i]);
                 if hash_table[index as usize] == 0u16 {
@@ -20,10 +20,22 @@ fn main() -> ! {
                 } else {
                     break;
                 }
+                i += 1;
             }
-            println!("no collisions");
-            println!("parameters k: {}, m: {}", k, m);
-            /* TODO: how to print vec cleanly without borrowing nightmare */
+            if i == can_ids.len() {
+                println!("no collisions");
+                println!("parameters k: {}, m: {}", k, m);
+                /* TODO: how to print vec cleanly without borrowing nightmare */
+                println!("hash table:");
+                for item in &mut hash_table {
+                    println!("{:x}", *item);
+                }
+                return ();
+            }
+            k += 1;
+            for item in &mut hash_table {
+                *item = 0u16;
+            }
         }
         k = 0;
         m += 1;
