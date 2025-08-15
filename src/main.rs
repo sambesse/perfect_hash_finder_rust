@@ -91,5 +91,6 @@ fn hash(m: u32, k: u32, x: &u16) -> u32 {
     ((k * (*x as u32)) % P) % m
 }
 
-//     println!("perf testing using perfect hash");
-// }
+fn perf_test(hash_desc: PerfectHash, hash_table: Vec<Option<MessageDesc>>) {
+    println!("perf testing using perfect hash");
+}
