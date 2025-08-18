@@ -1,7 +1,10 @@
+use rand::Rng;
+use std::time::{Duration, Instant};
 use std::vec;
 
 const P: u32 = 66587;
 const K_MAX: u32 = 0xfffff;
+const N_PERF_TEST: u32 = 10000;
 
 struct MessageDesc {
     id: u16,
@@ -92,5 +95,12 @@ fn hash(m: u32, k: u32, x: &u16) -> u32 {
 }
 
 fn perf_test(hash_desc: PerfectHash, hash_table: Vec<Option<MessageDesc>>) {
+    let mut rng = rand::thread_rng();
     println!("perf testing using perfect hash");
+    for _n in 1..N_PERF_TEST {
+        let rand_id = rng.gen_range(0..0xfff) as u16;
+        let index = hash(hash_desc.m, hash_desc.k, &rand_id);
+
+        let _res = hash_table.get(index as usize);
+    }
 }
