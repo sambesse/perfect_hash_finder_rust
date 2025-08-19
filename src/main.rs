@@ -1,5 +1,5 @@
 use rand::Rng;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use std::vec;
 
 const P: u32 = 66587;
@@ -77,6 +77,7 @@ fn main() -> () {
                         Some(message_desc) => println!("{:x}", message_desc.id),
                     };
                 }
+                perf_test(perf_hash, hash_table);
                 return ();
             }
             k += 1;
@@ -97,10 +98,15 @@ fn hash(m: u32, k: u32, x: &u16) -> u32 {
 fn perf_test(hash_desc: PerfectHash, hash_table: Vec<Option<MessageDesc>>) {
     let mut rng = rand::thread_rng();
     println!("perf testing using perfect hash");
+    let mut total_duration = 0u128;
     for _n in 1..N_PERF_TEST {
         let rand_id = rng.gen_range(0..0xfff) as u16;
         let index = hash(hash_desc.m, hash_desc.k, &rand_id);
-
+        let begin = Instant::now();
         let _res = hash_table.get(index as usize);
+        let duration = begin.elapsed().as_nanos();
+        total_duration += duration;
     }
+    let avg_duration = total_duration / N_PERF_TEST as u128;
+    println!("custom hashing algo average duration: {avg_duration}");
 }
