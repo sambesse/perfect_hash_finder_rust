@@ -1,4 +1,5 @@
 use rand::Rng;
+use std::collections::HashMap;
 use std::time::Instant;
 use std::vec;
 
@@ -35,6 +36,11 @@ fn main() -> () {
     can_ids.push(MessageDesc::new(0x600));
     can_ids.push(MessageDesc::new(0x601));
     can_ids.push(MessageDesc::new(0x602));
+
+    let mut hash_map = HashMap::new();
+    for i in &can_ids {
+        hash_map.insert(i.id, i);
+    }
 
     let mut m = can_ids.len() as u32;
     let mut k = 1u32;
@@ -77,7 +83,7 @@ fn main() -> () {
                         Some(message_desc) => println!("{:x}", message_desc.id),
                     };
                 }
-                perf_test(perf_hash, hash_table, can_ids);
+                perf_test(perf_hash, hash_table, &can_ids, hash_map);
                 return ();
             }
             k += 1;
@@ -98,28 +104,51 @@ fn hash(m: u32, k: u32, x: &u16) -> u32 {
 fn perf_test(
     hash_desc: PerfectHash,
     hash_table: Vec<Option<MessageDesc>>,
-    msg_list: Vec<MessageDesc>,
+    msg_list: &Vec<MessageDesc>,
+    hash_map: HashMap<u16, &MessageDesc>,
 ) {
     let mut rng = rand::thread_rng();
     println!("perf testing using perfect hash");
-    let mut total_duration = 0u128;
+    let mut custom_hash_duration = 0u128;
+    let mut naive_duration = 0u128;
+    let mut builtin_hash_duration = 0u128;
     for _n in 1..N_PERF_TEST {
         let rand_id = rng.gen_range(0..0xfff) as u16;
         let begin = Instant::now();
         let index = hash(hash_desc.m, hash_desc.k, &rand_id);
         let _res = hash_table.get(index as usize);
         let duration = begin.elapsed().as_nanos();
-        total_duration += duration;
+        custom_hash_duration += duration;
+        let begin = Instant::now();
+        let _res = naive_search(rand_id, &msg_list);
+        let duration = begin.elapsed().as_nanos();
+        naive_duration += duration;
+        let begin = Instant::now();
+        let _res = native_search(rand_id, &hash_map);
+        let duration = begin.elapsed().as_nanos();
+        builtin_hash_duration += duration;
     }
-    let avg_duration = total_duration / N_PERF_TEST as u128;
+    let avg_duration = custom_hash_duration / N_PERF_TEST as u128;
     println!("custom hashing algo average duration: {avg_duration}");
+    let avg_duration = naive_duration / N_PERF_TEST as u128;
+    println!("naive algo average duration: {avg_duration}");
+    let avg_duration = builtin_hash_duration / N_PERF_TEST as u128;
+    println!("builtin hashing algo average duration: {avg_duration}");
 }
 
-fn naive_search(id: u16, msg_list: Vec<MessageDesc>) -> Option<MessageDesc> {
+fn naive_search(id: u16, msg_list: &Vec<MessageDesc>) -> Option<MessageDesc> {
     for _n in 1..msg_list.len() {
         if msg_list[_n].id == id {
             return Some(MessageDesc::new(id));
         }
     }
     return None;
+}
+
+fn native_search(id: u16, msg_list: &HashMap<u16, &MessageDesc>) -> Option<MessageDesc> {
+    let ret = msg_list.get(&id);
+    match ret {
+        None => return None,
+        Some(op) => return Some(MessageDesc::new(op.id)),
+    }
 }
