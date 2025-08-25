@@ -1,22 +1,23 @@
 use rand::Rng;
 use std::collections::HashMap;
 use std::time::Instant;
-use std::vec;
+use std::{env, vec};
 
 const P: u32 = 66587;
 const K_MAX: u32 = 0xfffff;
 const N_PERF_TEST: u32 = 10000;
+const MAX_CAN_ID: u16 = 0x610;
 
 struct MessageDesc {
     id: u16,
-    tag: String,
+    _tag: String,
 }
 
 impl MessageDesc {
     fn new(id: u16) -> Self {
         MessageDesc {
             id: id,
-            tag: id.to_string(),
+            _tag: id.to_string(),
         }
     }
 }
@@ -27,19 +28,32 @@ struct PerfectHash {
     m: u32,
 }
 
+fn print_usage(prog_name: &String) {
+    println!("{prog_name} <number_can_ids>")
+}
+
 fn main() -> () {
     let mut can_ids = vec![];
-    can_ids.push(MessageDesc::new(0x16));
-    can_ids.push(MessageDesc::new(0x23));
-    can_ids.push(MessageDesc::new(0x203));
-    can_ids.push(MessageDesc::new(0x301));
-    can_ids.push(MessageDesc::new(0x600));
-    can_ids.push(MessageDesc::new(0x601));
-    can_ids.push(MessageDesc::new(0x602));
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        println!("too few arguments provided");
+        print_usage(&args[0]);
+        return ();
+    }
 
+    let num_args: u32 = args[1].parse().unwrap();
     let mut hash_map = HashMap::new();
-    for i in &can_ids {
-        hash_map.insert(i.id, i);
+    let mut rng = rand::thread_rng();
+    for _i in 0..num_args {
+        let mut rand_id = rng.gen_range(0..MAX_CAN_ID) as u16;
+        while hash_map.contains_key(&rand_id) {
+            println!("found duplicate trying again");
+            rand_id = rng.gen_range(0..MAX_CAN_ID) as u16;
+        }
+        let new_id = rand_id;
+        let new_msg = MessageDesc::new(rand_id);
+        hash_map.insert(new_id, new_msg);
+        can_ids.push(MessageDesc::new(new_id));
     }
 
     let mut m = can_ids.len() as u32;
@@ -91,6 +105,7 @@ fn main() -> () {
                 *item = None;
             }
         }
+        println!("no suitable k found for m = {m}");
         k = 0;
         m += 1;
         hash_table.push(None);
@@ -105,7 +120,7 @@ fn perf_test(
     hash_desc: PerfectHash,
     hash_table: Vec<Option<MessageDesc>>,
     msg_list: &Vec<MessageDesc>,
-    hash_map: HashMap<u16, &MessageDesc>,
+    hash_map: HashMap<u16, MessageDesc>,
 ) {
     let mut rng = rand::thread_rng();
     println!("perf testing using perfect hash");
@@ -145,7 +160,7 @@ fn naive_search(id: u16, msg_list: &Vec<MessageDesc>) -> Option<MessageDesc> {
     return None;
 }
 
-fn native_search(id: u16, msg_list: &HashMap<u16, &MessageDesc>) -> Option<MessageDesc> {
+fn native_search(id: u16, msg_list: &HashMap<u16, MessageDesc>) -> Option<MessageDesc> {
     let ret = msg_list.get(&id);
     match ret {
         None => return None,
